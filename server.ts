@@ -11,6 +11,7 @@ import collectionRouter from "./services/collection/collectionRouter";
 import couponRouter from "./services/coupon/couponRouter";
 import ticketRouter from "./services/ticket/ticketRouter";
 import refundRouter from "./services/refund/refundRouter";
+import scraperRouter from "./services/scraper/scraperRouter";
 
 const app = express();
 const Port = config.port || 4001;
@@ -49,6 +50,7 @@ app.use("/api/collection", collectionRouter);
 app.use("/api/coupon", couponRouter);
 app.use("/api/ticket", ticketRouter);
 app.use("/api/refund", refundRouter);
+app.use("/api/scraper", scraperRouter);
 
 //Global Error Handler
 app.use(globalErrorHAndler)

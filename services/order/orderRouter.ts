@@ -13,6 +13,9 @@ import {
   markOrderExpired,
   requestRenewal,
   getMySubscriptions,
+  uddoktapayVerify,
+  uddoktapayCancel,
+  uddoktapayWebhook,
 } from "./orderController";
 import { isAdmin } from "../../src/middlewares/isAdmin";
 
@@ -31,9 +34,14 @@ orderRouter.get("/my-subscriptions", authMiddleware, getMySubscriptions);
 orderRouter.post("/create", authMiddleware, createOrder);
 orderRouter.post("/renew", authMiddleware, requestRenewal);
 
-// Payment callbacks
+// SSLCommerz payment callbacks
 orderRouter.post("/ssl-payment-success/:id", sslPaymentSuccess);
 orderRouter.post("/ssl-payment-cancel/:id", sslPaymentCancelled);
 orderRouter.post("/ssl-payment-fail/:id", sslPaymentFailure);
+
+// UddoktaPay payment callbacks
+orderRouter.get("/uddoktapay-verify", uddoktapayVerify);
+orderRouter.get("/uddoktapay-cancel/:id", uddoktapayCancel);
+orderRouter.post("/uddoktapay-webhook", uddoktapayWebhook);
 
 export default orderRouter;

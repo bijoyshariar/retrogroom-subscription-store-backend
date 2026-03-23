@@ -13,9 +13,8 @@ const _config = {
   // UddoktaPay
   uddoktapayApiKey: process.env.UDDOKTAPAY_API_KEY,
   uddoktapayBaseUrl: process.env.UDDOKTAPAY_BASE_URL,
-  // Alpha SMS
+  // Alpha SMS (sms.net.bd)
   alphaSmsApiKey: process.env.ALPHA_SMS_API_KEY,
-  alphaSmsBaseUrl: process.env.ALPHA_SMS_BASE_URL,
 };
 
 export const config = Object.freeze(_config);

@@ -4,6 +4,7 @@ import Order from "./orderModel";
 import Product from "../product/productModel";
 import { config } from "../../src/config";
 import crypto from "crypto";
+import { createCheckout, verifyPayment, validateWebhook } from "../../src/services/uddoktapayService";
 const SSLCommerzPayment = require("sslcommerz-lts");
 
 interface AuthRequest extends Request {
@@ -193,6 +194,22 @@ export const createOrder = async (
         .catch((err: any) => {
           return next(createHttpError(500, `SSLCommerz error: ${err.message}`));
         });
+    } else if (paymentMethod === "UDDOKTAPAY") {
+      await newOrder.save();
+      try {
+        const paymentUrl = await createCheckout({
+          fullName: req.user.userName,
+          email: req.user.email,
+          amount: newOrder.totalAmount,
+          metadata: { order_id: newOrder._id.toString() },
+          redirectUrl: `${config.root}/api/order/uddoktapay-verify`,
+          cancelUrl: `${config.root}/api/order/uddoktapay-cancel/${newOrder._id}`,
+          webhookUrl: `${config.root}/api/order/uddoktapay-webhook`,
+        });
+        res.status(200).json({ url: paymentUrl });
+      } catch (err: any) {
+        return next(createHttpError(500, `UddoktaPay error: ${err.message}`));
+      }
     } else {
       return res.status(400).json({ message: "Invalid payment method" });
     }
@@ -455,6 +472,94 @@ export const getMySubscriptions = async (
       .sort({ createdAt: -1 });
 
     res.status(200).json(subscriptions);
+  } catch (err: any) {
+    return next(createHttpError(500, err.message));
+  }
+};
+
+// UddoktaPay: Verify Payment (redirect callback)
+export const uddoktapayVerify = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const invoiceId = req.query.invoice_id as string;
+
+  if (!invoiceId) {
+    return next(createHttpError(400, "Missing invoice_id"));
+  }
+
+  try {
+    const paymentData = await verifyPayment(invoiceId);
+
+    if (paymentData.status === "COMPLETED") {
+      const orderId = paymentData.metadata?.order_id;
+      const order = await Order.findById(orderId);
+
+      if (!order) {
+        return next(createHttpError(404, "Order not found"));
+      }
+
+      order.status = "PAID";
+      order.transectionId = paymentData.transaction_id;
+      await updateProductStock(order.products, next);
+      await order.save();
+
+      // Redirect to frontend success page
+      res.redirect(`${config.frontendUrl}/checkout/success?order=${order.orderNumber}`);
+    } else {
+      res.redirect(`${config.frontendUrl}/checkout/failed`);
+    }
+  } catch (err: any) {
+    return next(createHttpError(500, err.message));
+  }
+};
+
+// UddoktaPay: Cancel Payment
+export const uddoktapayCancel = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { id } = req.params;
+
+  try {
+    const order = await Order.findById(id);
+    if (order) {
+      await order.deleteOne();
+    }
+    res.redirect(`${config.frontendUrl}/checkout/cancelled`);
+  } catch (err: any) {
+    return next(createHttpError(500, err.message));
+  }
+};
+
+// UddoktaPay: Webhook (IPN)
+export const uddoktapayWebhook = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const apiKey = req.headers["rt-uddoktapay-api-key"] as string;
+
+  if (!validateWebhook(apiKey)) {
+    return res.status(401).json({ message: "Unauthorized webhook" });
+  }
+
+  try {
+    const { status, metadata, transaction_id } = req.body;
+
+    if (status === "COMPLETED" && metadata?.order_id) {
+      const order = await Order.findById(metadata.order_id);
+      if (order && order.status === "PENDING") {
+        order.status = "PAID";
+        order.transectionId = transaction_id;
+        await updateProductStock(order.products, next);
+        await order.save();
+      }
+    }
+
+    res.status(200).json({ message: "Webhook processed" });
   } catch (err: any) {
     return next(createHttpError(500, err.message));
   }

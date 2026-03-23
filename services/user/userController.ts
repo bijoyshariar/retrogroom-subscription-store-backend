@@ -656,7 +656,7 @@ export const register = async (
   res: Response,
   next: NextFunction,
 ) => {
-  const { userName, email, password } = req.body;
+  const { userName, email, password, mobile, whatsappNumber } = req.body;
   if (checkRequiredFields([userName, email, password], next)) return;
 
   try {
@@ -667,7 +667,13 @@ export const register = async (
     }
 
     const hashPassword = await bcrypt.hash(password, 12);
-    const user = new User({ userName, email, password: hashPassword });
+    const user = new User({
+      userName,
+      email,
+      password: hashPassword,
+      mobile: mobile || "",
+      whatsappNumber: whatsappNumber || "",
+    });
 
     await user.save();
     const { token, refreshToken } = generateTokens(user._id);
@@ -801,7 +807,7 @@ export const updatedUser = async (
   next: NextFunction,
 ) => {
   const userId = req.user._id;
-  const { firstName, lastName, email, mobile } = req.body;
+  const { firstName, lastName, email, mobile, whatsappNumber } = req.body;
 
   try {
     const user = await findUserById(userId, next);
@@ -811,6 +817,7 @@ export const updatedUser = async (
     user.lastName = lastName || user.lastName;
     user.email = email || user.email;
     user.mobile = mobile || user.mobile;
+    if (whatsappNumber !== undefined) user.whatsappNumber = whatsappNumber;
 
     await user.save();
     res.status(200).json({ user, message: "User updated successfully" });
@@ -1206,6 +1213,85 @@ export const increaseCartItemQuantity = async (
         cart: user.cart,
         cartTotal,
       });
+  } catch (error) {
+    next(createHttpError(500, "Server Error"));
+  }
+};
+
+// Send OTP (via SMS or Email)
+export const sendOtp = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  const userId = req.user._id;
+  const { type } = req.body; // "SMS" or "EMAIL"
+
+  if (!type || !["SMS", "EMAIL"].includes(type)) {
+    return next(createHttpError(400, "OTP type must be SMS or EMAIL"));
+  }
+
+  try {
+    const user = await findUserById(userId, next);
+    if (!user) return;
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = otp;
+    user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    user.otpType = type;
+    await user.save();
+
+    // TODO: Integrate Alpha SMS API for SMS type
+    // TODO: Integrate email sending for EMAIL type
+    // For now, return OTP in response (remove in production)
+    res.status(200).json({
+      message: `OTP sent via ${type}`,
+      otp: process.env.NODE_ENV === "DEVELOPMENT" ? otp : undefined,
+    });
+  } catch (error) {
+    next(createHttpError(500, "Server Error"));
+  }
+};
+
+// Verify OTP
+export const verifyOtp = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  const userId = req.user._id;
+  const { otp } = req.body;
+
+  if (!otp) {
+    return next(createHttpError(400, "OTP is required"));
+  }
+
+  try {
+    const user = await findUserById(userId, next);
+    if (!user) return;
+
+    if (!user.otp || !user.otpExpires) {
+      return next(createHttpError(400, "No OTP request found. Please request a new one."));
+    }
+
+    if (new Date() > user.otpExpires) {
+      user.otp = undefined;
+      user.otpExpires = undefined;
+      await user.save();
+      return next(createHttpError(400, "OTP has expired. Please request a new one."));
+    }
+
+    if (user.otp !== otp) {
+      return next(createHttpError(400, "Invalid OTP"));
+    }
+
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    user.otpType = undefined;
+    await user.save();
+
+    res.status(200).json({ message: "Account verified successfully" });
   } catch (error) {
     next(createHttpError(500, "Server Error"));
   }

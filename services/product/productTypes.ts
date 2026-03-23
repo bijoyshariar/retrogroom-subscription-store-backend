@@ -6,11 +6,22 @@ export interface ProductStockDocument extends Document {
   quantity: number;
 }
 
+export interface ProductVariantDocument extends Document {
+  name: string;
+  price: number;
+  salePrice: number | null;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 export interface ProductDocument extends Document {
   productId: string;
   productName: string;
   productPrice: number;
+  productSalePrice: number | null;
   productDescription: string;
+  shortDescription: string;
+  longDescription: string;
   productImage: string;
   productImageUrl: string[];
   productCategory: string;
@@ -18,8 +29,16 @@ export interface ProductDocument extends Document {
   totalSoldProduct: number;
   productColors: string[];
   productSizes: string[];
-  productStock: ProductStockDocument[]; // Updated to be an array of ProductStock objects
+  productStock: ProductStockDocument[];
   productCollection: string;
+  productTags: string[];
+  productVariants: ProductVariantDocument[];
+  isFeatured: boolean;
+  isTrending: boolean;
+  trustNotes: string;
+  deliveryNotes: string;
+  lowStockLabel: string;
+  status: "DRAFT" | "ACTIVE" | "HIDDEN";
   productRatings: {
     rating: number;
     comment: string;

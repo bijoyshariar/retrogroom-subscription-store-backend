@@ -31,25 +31,35 @@ export const createProduct = async (
   const {
     productName,
     productPrice,
+    productSalePrice,
     productDescription,
+    shortDescription,
+    longDescription,
     productCategory,
     productStock,
     productColor,
     productCollection,
     productImageUrl,
     productImage,
+    productTags,
+    productVariants,
+    isFeatured,
+    isTrending,
+    trustNotes,
+    deliveryNotes,
+    lowStockLabel,
+    status,
   } = req.body;
   if (
     !productName ||
     !productPrice ||
     !productDescription ||
-    !productCategory ||
-    !productStock
+    !productCategory
   ) {
     return next(createHttpError(400, "Input required fields"));
   }
   const proSlug = slugify(productName);
-  const proCollection = slugify(productCollection);
+  const proCollection = productCollection ? slugify(productCollection) : "";
   const proCategory = slugify(productCategory);
   const product = await Product.findOne({ productSlug: proSlug });
   if (product) {
@@ -58,45 +68,58 @@ export const createProduct = async (
     );
   }
 
-  const productVariant = updateProductColorsAndSizes(productStock);
+  const productVariant = productStock ? updateProductColorsAndSizes(productStock) : { colors: [], sizes: [] };
 
   try {
     const newProduct = new Product({
       productName,
       productPrice,
+      productSalePrice: productSalePrice || null,
       productDescription,
+      shortDescription: shortDescription || "",
+      longDescription: longDescription || "",
       productCategory: proCategory,
       productSlug: proSlug,
       productColors: productVariant.colors,
       productSizes: productVariant.sizes,
-      productStock,
+      productStock: productStock || [],
       productColor,
       productCollection: proCollection,
       productImageUrl,
       productImage,
+      productTags: productTags || [],
+      productVariants: productVariants || [],
+      isFeatured: isFeatured || false,
+      isTrending: isTrending || false,
+      trustNotes: trustNotes || "Secure payment and satisfaction guaranteed",
+      deliveryNotes: deliveryNotes || "Instant digital delivery after purchase",
+      lowStockLabel: lowStockLabel || "",
+      status: status || "ACTIVE",
     });
 
-    const collection = await Collection.findOne({
-      collectionName: proCollection,
-    });
-    if (collection) {
-      await Collection.findOneAndUpdate(
-        { collectionName: collection.collectionName },
-        {
-          $push: {
-            collectionProduct: newProduct._id,
-          },
-        },
-      );
-    } else {
-      const newCollection = new Collection({
+    if (proCollection) {
+      const collection = await Collection.findOne({
         collectionName: proCollection,
-        collectionProduct: newProduct._id,
-        collectionImage: null,
-        collectionCategory: newProduct.productCategory,
       });
+      if (collection) {
+        await Collection.findOneAndUpdate(
+          { collectionName: collection.collectionName },
+          {
+            $push: {
+              collectionProduct: newProduct._id,
+            },
+          },
+        );
+      } else {
+        const newCollection = new Collection({
+          collectionName: proCollection,
+          collectionProduct: newProduct._id,
+          collectionImage: null,
+          collectionCategory: newProduct.productCategory,
+        });
 
-      await newCollection.save();
+        await newCollection.save();
+      }
     }
 
     await newProduct.save();
@@ -193,14 +216,24 @@ export const productDataUpdate = async (
 
     if (updateData.productName) {
       product.productName = updateData.productName;
-      product.productSlug = slugify(updateData.productName); // Update slug if productName changes
+      product.productSlug = slugify(updateData.productName);
     }
-    if (updateData.productPrice) {
-      product.productPrice = updateData.productPrice;
-    }
-    if (updateData.productDescription) {
-      product.productDescription = updateData.productDescription;
-    }
+    if (updateData.productPrice !== undefined) product.productPrice = updateData.productPrice;
+    if (updateData.productSalePrice !== undefined) product.productSalePrice = updateData.productSalePrice;
+    if (updateData.productDescription !== undefined) product.productDescription = updateData.productDescription;
+    if (updateData.shortDescription !== undefined) product.shortDescription = updateData.shortDescription;
+    if (updateData.longDescription !== undefined) product.longDescription = updateData.longDescription;
+    if (updateData.productTags !== undefined) product.productTags = updateData.productTags;
+    if (updateData.productVariants !== undefined) product.productVariants = updateData.productVariants;
+    if (updateData.isFeatured !== undefined) product.isFeatured = updateData.isFeatured;
+    if (updateData.isTrending !== undefined) product.isTrending = updateData.isTrending;
+    if (updateData.trustNotes !== undefined) product.trustNotes = updateData.trustNotes;
+    if (updateData.deliveryNotes !== undefined) product.deliveryNotes = updateData.deliveryNotes;
+    if (updateData.lowStockLabel !== undefined) product.lowStockLabel = updateData.lowStockLabel;
+    if (updateData.status !== undefined) product.status = updateData.status;
+    if (updateData.productImageUrl !== undefined) product.productImageUrl = updateData.productImageUrl;
+    if (updateData.productImage !== undefined) product.productImage = updateData.productImage;
+    if (updateData.productCategory !== undefined) product.productCategory = slugify(updateData.productCategory);
 
     await product.save();
     res

@@ -17,6 +17,29 @@ const productStockSchema = new Schema({
   },
 });
 
+const productVariantSchema = new Schema({
+  name: {
+    type: String,
+    required: true,
+  },
+  price: {
+    type: Number,
+    required: true,
+  },
+  salePrice: {
+    type: Number,
+    default: null,
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
+  sortOrder: {
+    type: Number,
+    default: 0,
+  },
+});
+
 const productSchema = new Schema<ProductDocument>(
   {
     productName: {
@@ -27,7 +50,17 @@ const productSchema = new Schema<ProductDocument>(
       type: Number,
       required: true,
     },
+    productSalePrice: {
+      type: Number,
+      default: null,
+    },
     productDescription: {
+      type: String,
+    },
+    shortDescription: {
+      type: String,
+    },
+    longDescription: {
       type: String,
     },
     productImage: {
@@ -52,10 +85,40 @@ const productSchema = new Schema<ProductDocument>(
     },
     productColors: [String],
     productSizes: [String],
-    productStock: [productStockSchema], // Updated to use the productStockSchema
+    productStock: [productStockSchema],
     productCollection: {
       type: String,
       lowercase: true,
+    },
+    productTags: {
+      type: [String],
+      default: [],
+    },
+    productVariants: [productVariantSchema],
+    isFeatured: {
+      type: Boolean,
+      default: false,
+    },
+    isTrending: {
+      type: Boolean,
+      default: false,
+    },
+    trustNotes: {
+      type: String,
+      default: "Secure payment and satisfaction guaranteed",
+    },
+    deliveryNotes: {
+      type: String,
+      default: "Instant digital delivery after purchase",
+    },
+    lowStockLabel: {
+      type: String,
+      default: "",
+    },
+    status: {
+      type: String,
+      enum: ["DRAFT", "ACTIVE", "HIDDEN"],
+      default: "ACTIVE",
     },
     productRatings: [
       {

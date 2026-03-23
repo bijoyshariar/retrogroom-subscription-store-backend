@@ -6,18 +6,22 @@ import userRouter from "./services/user/userRouter";
 import productRouter from "./services/product/productRouter";
 import orderRouter from "./services/order/orderRouter";
 import collectionRouter from "./services/collection/collectionRouter";
-// import {isAdmin} from "./src/middlewares/isAdmin"
-
-
+import couponRouter from "./services/coupon/couponRouter";
+import ticketRouter from "./services/ticket/ticketRouter";
+import refundRouter from "./services/refund/refundRouter";
 
 const app = express();
 const Port = config.port || 4001;
 app.use(express.json());
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:3000'); // Adjust the origin to match your frontend URL
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  const allowedOrigins = [config.frontendUrl, 'http://localhost:3000'];
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true'); // Allow cookies to be sent with requests
+  res.header('Access-Control-Allow-Credentials', 'true');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
@@ -29,12 +33,12 @@ connectDb();
 
 // Routes
 app.use("/api/user", userRouter);
-
 app.use("/api/product", productRouter);
-
 app.use("/api/order", orderRouter);
-
 app.use("/api/collection", collectionRouter);
+app.use("/api/coupon", couponRouter);
+app.use("/api/ticket", ticketRouter);
+app.use("/api/refund", refundRouter);
 
 //Global Error Handler
 app.use(globalErrorHAndler)

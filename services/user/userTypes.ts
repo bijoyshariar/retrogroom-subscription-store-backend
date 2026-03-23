@@ -5,6 +5,7 @@ interface CartItem {
   quantity: number;
   color: string;
   size: string;
+  variantId?: Types.ObjectId;
 }
 
 export interface UserDocument extends Document {
@@ -13,6 +14,7 @@ export interface UserDocument extends Document {
   lastName: string;
   email: string;
   mobile: string;
+  whatsappNumber: string;
   password: string;
   roles: "ADMIN" | "CUSTOMER";
   cart: CartItem[];
@@ -26,4 +28,8 @@ export interface UserDocument extends Document {
   passwordChangedAt?: Date;
   passwordResetToken?: string;
   passwordResetExpires?: Date;
+  otp?: string;
+  otpExpires?: Date;
+  otpType?: "SMS" | "EMAIL";
+  isVerified: boolean;
 }

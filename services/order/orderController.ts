@@ -301,9 +301,161 @@ export const updateOrderStatus = async (
   }
 
   order.status = status;
-  order.save();
+  if (status === "DELIVERED") {
+    order.deliveredAt = new Date();
+  }
+  await order.save();
 
   res
     .status(200)
     .json({ message: `${id} status ${status} updated successfully.` });
+};
+
+// Admin: Assign Credentials to Order
+export const assignCredentials = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { id } = req.params;
+  const { email, password, renewDate, notes, deliveryMethod } = req.body;
+
+  if (!email || !password) {
+    return next(createHttpError(400, "Credential email and password are required"));
+  }
+
+  try {
+    const order = await Order.findById(id).populate("user", "whatsappNumber userName");
+    if (!order) {
+      return next(createHttpError(404, "Order not found"));
+    }
+
+    order.credentials = {
+      email,
+      password,
+      renewDate: renewDate ? new Date(renewDate) : null,
+      notes: notes || "",
+    };
+    order.status = "DELIVERED";
+    order.deliveredAt = new Date();
+    order.deliveryMethod = deliveryMethod || "DASHBOARD";
+
+    await order.save();
+
+    res.status(200).json({
+      order,
+      message: `Credentials assigned and order marked as delivered via ${order.deliveryMethod}`,
+    });
+  } catch (err: any) {
+    return next(createHttpError(500, err.message));
+  }
+};
+
+// Admin: Mark Order as Active (subscription running)
+export const markOrderActive = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { id } = req.params;
+
+  try {
+    const order = await Order.findById(id);
+    if (!order) {
+      return next(createHttpError(404, "Order not found"));
+    }
+
+    order.status = "ACTIVE";
+    await order.save();
+
+    res.status(200).json({ order, message: "Order marked as active" });
+  } catch (err: any) {
+    return next(createHttpError(500, err.message));
+  }
+};
+
+// Admin: Mark Order as Expired
+export const markOrderExpired = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { id } = req.params;
+
+  try {
+    const order = await Order.findById(id);
+    if (!order) {
+      return next(createHttpError(404, "Order not found"));
+    }
+
+    order.status = "EXPIRED";
+    await order.save();
+
+    res.status(200).json({ order, message: "Order marked as expired" });
+  } catch (err: any) {
+    return next(createHttpError(500, err.message));
+  }
+};
+
+// Customer: Request Renewal
+export const requestRenewal = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { orderId } = req.body;
+  const userId = req.user._id;
+
+  try {
+    const originalOrder = await Order.findOne({ _id: orderId, user: userId });
+    if (!originalOrder) {
+      return next(createHttpError(404, "Order not found"));
+    }
+
+    if (!["ACTIVE", "EXPIRED"].includes(originalOrder.status)) {
+      return next(createHttpError(400, "Can only renew active or expired subscriptions"));
+    }
+
+    // Create a new renewal order
+    const renewalOrder = new Order({
+      user: userId,
+      products: originalOrder.products,
+      totalAmount: originalOrder.totalAmount,
+      paymentMethod: originalOrder.paymentMethod,
+      status: "PENDING",
+      isRenewal: true,
+      originalOrder: originalOrder._id,
+    });
+
+    await renewalOrder.save();
+
+    res.status(201).json({
+      renewalOrder,
+      message: "Renewal order created. Please proceed with payment.",
+    });
+  } catch (err: any) {
+    return next(createHttpError(500, err.message));
+  }
+};
+
+// Customer: Get My Subscriptions (Active/Expired orders with credentials)
+export const getMySubscriptions = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  const userId = req.user._id;
+
+  try {
+    const subscriptions = await Order.find({
+      user: userId,
+      status: { $in: ["DELIVERED", "ACTIVE", "EXPIRED"] },
+    })
+      .populate("products.product", "productName productImage productSlug")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(subscriptions);
+  } catch (err: any) {
+    return next(createHttpError(500, err.message));
+  }
 };

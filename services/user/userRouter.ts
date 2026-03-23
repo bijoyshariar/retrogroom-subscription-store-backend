@@ -19,6 +19,8 @@ import {
   decreaseCartItemQuantity,
   getWishlist,
   addRatingAndComment,
+  sendOtp,
+  verifyOtp,
 } from "./userController";
 import { isAdmin } from "../../src/middlewares/isAdmin";
 import authMiddleware from "../../src/middlewares/authMiddleware";
@@ -52,5 +54,7 @@ userRouter.post(
   decreaseCartItemQuantity,
 );
 userRouter.post("/review", authMiddleware, addRatingAndComment);
+userRouter.post("/send-otp", authMiddleware, sendOtp);
+userRouter.post("/verify-otp", authMiddleware, verifyOtp);
 
 export default userRouter;

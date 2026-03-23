@@ -26,6 +26,7 @@ const userSchema = new Schema<UserDocument>(
       required: true,
     },
     mobile: String,
+    whatsappNumber: String,
     password: {
       type: String,
       required: true,
@@ -51,6 +52,16 @@ const userSchema = new Schema<UserDocument>(
     passwordChangedAt: Date,
     passwordResetToken: String,
     passwordResetExpires: Date,
+    otp: String,
+    otpExpires: Date,
+    otpType: {
+      type: String,
+      enum: ["SMS", "EMAIL"],
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true },
 );

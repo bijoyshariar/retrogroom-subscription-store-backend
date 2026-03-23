@@ -6,8 +6,16 @@ const _config = {
   env: process.env.NODE_ENV,
   jwtSecret: process.env.JWT_SECRET,
   root: process.env.ROOT,
+  frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000",
+  // SSLCommerz
   storeId: process.env.STORE_ID,
   storeSecret: process.env.STORE_PASSWORD,
+  // UddoktaPay
+  uddoktapayApiKey: process.env.UDDOKTAPAY_API_KEY,
+  uddoktapayBaseUrl: process.env.UDDOKTAPAY_BASE_URL,
+  // Alpha SMS
+  alphaSmsApiKey: process.env.ALPHA_SMS_API_KEY,
+  alphaSmsBaseUrl: process.env.ALPHA_SMS_BASE_URL,
 };
 
 export const config = Object.freeze(_config);

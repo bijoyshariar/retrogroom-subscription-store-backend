@@ -23,6 +23,14 @@ const updateProductStock = async (orderedProducts: any, next: NextFunction) => {
       );
     }
 
+    // Skip stock update for digital products (no stock defined)
+    if (!product.productStock || product.productStock.length === 0) {
+      // Digital product — just increment sold count
+      product.totalSoldProduct += orderedProduct.quantity;
+      await product.save();
+      continue;
+    }
+
     const productStock = product.productStock.find(
       (stock) =>
         stock.color === orderedProduct.color &&
@@ -39,15 +47,13 @@ const updateProductStock = async (orderedProducts: any, next: NextFunction) => {
         );
       }
 
-      productStock.quantity -= orderedProduct.quantity; // Reduce stock
+      productStock.quantity -= orderedProduct.quantity;
+      product.totalSoldProduct += orderedProduct.quantity;
       await product.save();
     } else {
-      return next(
-        createHttpError(
-          400,
-          `Product stock for color: ${orderedProduct.color}, size: ${orderedProduct.size} not found`,
-        ),
-      );
+      // No matching stock entry but stock exists — skip silently for digital
+      product.totalSoldProduct += orderedProduct.quantity;
+      await product.save();
     }
   }
 };
@@ -93,32 +99,51 @@ export const createOrder = async (
         );
       }
 
-      const productStock = product.productStock.find(
-        (stock) =>
-          stock.color === orderedProduct.color &&
-          stock.size === orderedProduct.size,
-      );
+      // Digital products: use variant price or base price, skip stock check
+      if (orderedProduct.variantId) {
+        const variant = product.productVariants.find(
+          (v: any) => v._id.toString() === orderedProduct.variantId,
+        );
+        if (variant) {
+          totalAmount += (variant.salePrice || variant.price) * orderedProduct.quantity;
+          productName.push(`${product.productName} (${variant.name})`);
+        } else {
+          totalAmount += (product.productSalePrice || product.productPrice) * orderedProduct.quantity;
+          productName.push(product.productName);
+        }
+      } else if (product.productStock.length > 0 && orderedProduct.color && orderedProduct.size) {
+        // Physical product with stock: check stock availability
+        const productStock = product.productStock.find(
+          (stock) =>
+            stock.color === orderedProduct.color &&
+            stock.size === orderedProduct.size,
+        );
 
-      if (productStock) {
-        if (productStock.quantity < orderedProduct.quantity) {
+        if (productStock) {
+          if (productStock.quantity < orderedProduct.quantity) {
+            return next(
+              createHttpError(
+                400,
+                `Insufficient stock for product ${product.productName}, color: ${orderedProduct.color}, size: ${orderedProduct.size}. Available: ${productStock.quantity}, Requested: ${orderedProduct.quantity}`,
+              ),
+            );
+          }
+          totalAmount += product.productPrice * orderedProduct.quantity;
+          productName.push(
+            `${product.productName} ${orderedProduct.size} ${orderedProduct.color}`,
+          );
+        } else {
           return next(
             createHttpError(
               400,
-              `Insufficient stock for product ${product.productName}, color: ${orderedProduct.color}, size: ${orderedProduct.size}. Available: ${productStock.quantity}, Requested: ${orderedProduct.quantity}`,
+              `Product stock for color: ${orderedProduct.color}, size: ${orderedProduct.size} not found`,
             ),
           );
         }
-        totalAmount += product.productPrice * orderedProduct.quantity;
-        productName.push(
-          `${product.productName} ${orderedProduct.size} ${orderedProduct.color}`,
-        );
       } else {
-        return next(
-          createHttpError(
-            400,
-            `Product stock for color: ${orderedProduct.color}, size: ${orderedProduct.size} not found`,
-          ),
-        );
+        // Digital product without variant: use sale price or base price
+        totalAmount += (product.productSalePrice || product.productPrice) * orderedProduct.quantity;
+        productName.push(product.productName);
       }
     }
 

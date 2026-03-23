@@ -28,7 +28,7 @@ const authMiddleware = async (
 
   try {
     const decoded: any = jwt.verify(token, config.jwtSecret as string);
-    const userID = decoded._id;
+    const userID = decoded._id || decoded.sub;
     const user = await User.findById(userID);
     if (!user) {
       return next(createHttpError(404, "User not found"));

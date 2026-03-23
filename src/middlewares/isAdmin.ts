@@ -24,7 +24,7 @@ const isAdmin = async (
     }
 
     const decodedToken: any = jwt.verify(token, config.jwtSecret as string);
-    const userId = decodedToken?._id;
+    const userId = decodedToken?._id || decodedToken?.sub;
 
     const user = await User.findById(userId);
 

@@ -4,6 +4,7 @@ import Product from "./productModel";
 import slugify from "slugify";
 import { ProductDocument, ProductStockDocument } from "./productTypes";
 import Collection from "../collection/collectionModel";
+import { processProductImage, deleteProductImages } from "../../src/services/imageService";
 
 const updateProductColorsAndSizes = (productStock: any) => {
   const color = new Set<string>();
@@ -352,5 +353,118 @@ export const getProductByCollection = async (
     return res.status(200).json(products);
   } catch (error: any) {
     return next(createHttpError(500, error.message));
+  }
+};
+
+// Upload Product Cover Image (single)
+export const uploadProductImage = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { id } = req.params;
+
+  if (!req.file) {
+    return next(createHttpError(400, "No image file provided"));
+  }
+
+  try {
+    const product = await Product.findById(id);
+    if (!product) {
+      return next(createHttpError(404, "Product not found"));
+    }
+
+    // Delete old image if exists
+    if (product.productImage) {
+      deleteProductImages(product.productImage);
+    }
+
+    const processed = await processProductImage(req.file);
+    product.productImage = processed.original;
+
+    await product.save();
+
+    res.status(200).json({
+      images: processed,
+      message: "Product image uploaded successfully",
+    });
+  } catch (err: any) {
+    return next(createHttpError(500, err.message));
+  }
+};
+
+// Upload Product Gallery Images (multiple)
+export const uploadProductGallery = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { id } = req.params;
+  const files = req.files as Express.Multer.File[];
+
+  if (!files || files.length === 0) {
+    return next(createHttpError(400, "No image files provided"));
+  }
+
+  try {
+    const product = await Product.findById(id);
+    if (!product) {
+      return next(createHttpError(404, "Product not found"));
+    }
+
+    const allProcessed = [];
+    for (const file of files) {
+      const processed = await processProductImage(file);
+      product.productImageUrl.push(processed.original);
+      allProcessed.push(processed);
+    }
+
+    await product.save();
+
+    res.status(200).json({
+      images: allProcessed,
+      gallery: product.productImageUrl,
+      message: `${files.length} image(s) uploaded successfully`,
+    });
+  } catch (err: any) {
+    return next(createHttpError(500, err.message));
+  }
+};
+
+// Delete Product Image from Gallery
+export const deleteProductImage = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { id } = req.params;
+  const { imageUrl } = req.body;
+
+  if (!imageUrl) {
+    return next(createHttpError(400, "imageUrl is required"));
+  }
+
+  try {
+    const product = await Product.findById(id);
+    if (!product) {
+      return next(createHttpError(404, "Product not found"));
+    }
+
+    // Remove from gallery array
+    product.productImageUrl = product.productImageUrl.filter(
+      (url) => url !== imageUrl,
+    );
+
+    // If it's the cover image, clear it
+    if (product.productImage === imageUrl) {
+      product.productImage = "";
+    }
+
+    deleteProductImages(imageUrl);
+    await product.save();
+
+    res.status(200).json({ message: "Image deleted successfully" });
+  } catch (err: any) {
+    return next(createHttpError(500, err.message));
   }
 };

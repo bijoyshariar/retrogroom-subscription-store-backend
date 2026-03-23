@@ -1,4 +1,5 @@
 import express from "express";
+import path from "path";
 import {config} from "./src/config";
 import connectDb from "./src/dbConnection";
 import globalErrorHAndler from "./src/middlewares/globalErrorHandler";
@@ -30,6 +31,9 @@ app.use((req, res, next) => {
 
 //MongoDB connection
 connectDb();
+
+// Serve uploaded images as static files
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // Health check (for UptimeRobot / cron pings to prevent cold starts)
 app.get("/api/health", (req, res) => {

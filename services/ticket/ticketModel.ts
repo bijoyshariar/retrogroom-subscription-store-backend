@@ -60,5 +60,8 @@ ticketSchema.pre("save", function (next) {
   next();
 });
 
+ticketSchema.index({ user: 1 });
+ticketSchema.index({ status: 1 });
+
 const Ticket = mongoose.model<TicketDocument>("Ticket", ticketSchema);
 export default Ticket;

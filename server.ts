@@ -31,6 +31,11 @@ app.use((req, res, next) => {
 //MongoDB connection
 connectDb();
 
+// Health check (for UptimeRobot / cron pings to prevent cold starts)
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 // Routes
 app.use("/api/user", userRouter);
 app.use("/api/product", productRouter);

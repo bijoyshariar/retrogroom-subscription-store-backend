@@ -146,5 +146,12 @@ const productSchema = new Schema<ProductDocument>(
   { timestamps: true },
 );
 
+productSchema.index({ productCategory: 1 });
+productSchema.index({ productTags: 1 });
+productSchema.index({ isFeatured: 1 });
+productSchema.index({ isTrending: 1 });
+productSchema.index({ status: 1 });
+productSchema.index({ productCollection: 1 });
+
 const Product = model<ProductDocument>("Product", productSchema);
 export default Product;

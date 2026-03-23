@@ -54,5 +54,9 @@ refundSchema.pre("save", function (next) {
   next();
 });
 
+refundSchema.index({ user: 1 });
+refundSchema.index({ status: 1 });
+refundSchema.index({ order: 1 });
+
 const Refund = mongoose.model<RefundDocument>("Refund", refundSchema);
 export default Refund;

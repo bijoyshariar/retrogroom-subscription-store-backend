@@ -1,206 +1,119 @@
-# Developer Documentation
+# CreativeCache Backend
 
-## Project Overview
-This project is a Node.js-based backend system built with TypeScript. It includes services for managing collections, orders, products, and users. The project follows a modular architecture to enhance maintainability and scalability.
+Digital subscription store backend built with Node.js, Express, TypeScript, and MongoDB.
 
 ## Prerequisites
-- Node.js (version 14.x or higher)
-- npm (version 6.x or higher)
-- TypeScript
-- A database (MongoDB, PostgreSQL, etc.)
+- Node.js (v18+)
+- npm
+- MongoDB (Atlas or local)
 
 ## Installation
 
-1. **Clone the repository:**
-   ```sh
-   git clone <repository_url>
-   cd <repository_name>
-   ```
-
-2. **Install dependencies:**
-   ```sh
-   npm install
-   ```
-
-3. **Set up environment variables:**
-    - Copy `.env.example` to `.env` and fill in the required values.
-      ```sh
-      cp .env.example .env
-      ```
-
-4. **Compile TypeScript:**
-   ```sh
-   npm run build
-   ```
-
-5. **Start the server:**
-   ```sh
-   npm start
-   ```
+```sh
+git clone https://github.com/bijoyshariar/retrogroom-subscription-store-backend.git
+cd retrogroom-subscription-store-backend
+npm install
+cp .env.example .env
+# Fill in .env values
+npm run dev
+```
 
 ## Project Structure
 
 ```
-node_project/
-├── .env
-├── .env.example
-├── .eslintrc.json
-├── .gitignore
-├── .prettierrc
-├── package.json
-├── package-lock.json
-├── server.ts
-├── tsconfig.json
-├── .idea/
+├── server.ts                  # Entry point
+├── src/
+│   ├── config.ts              # Environment config
+│   ├── dbConnection.ts        # MongoDB connection
+│   └── middlewares/
+│       ├── authMiddleware.ts   # JWT auth
+│       ├── isAdmin.ts         # Admin check
+│       └── globalErrorHandler.ts
 ├── services/
-│   ├── collection/
-│   │   ├── collectionController.ts
-│   │   ├── collectionModel.ts
-│   │   ├── collectionRouter.ts
-│   │   └── collectionTypes.ts
-│   ├── order/
-│   │   ├── orderController.ts
-│   │   ├── orderModel.ts
-│   │   ├── orderRouter.ts
-│   │   └── orderTypes.ts
-│   ├── product/
-│   │   ├── productController.ts
-│   │   ├── productModel.ts
-│   │   ├── productRouter.ts
-│   │   └── productTypes.ts
-│   └── user/
-│       ├── userController.ts
-│       ├── userModel.ts
-│       ├── userRouter.ts
-│       └── userTypes.ts
-└── src/
-    ├── config.ts
-    ├── dbConnection.ts
-    └── middlewares/
-        ├── authMiddleware.ts
-        ├── globalErrorHandler.ts
-        └── isAdmin.ts
+│   ├── user/                  # Auth, profile, cart, wishlist, OTP, reviews
+│   ├── product/               # Products, variants, tags, categories
+│   ├── order/                 # Orders, credentials, renewals, subscriptions
+│   ├── collection/            # Product collections
+│   ├── coupon/                # Coupons (fixed/percentage)
+│   ├── ticket/                # Support tickets
+│   └── refund/                # Refund requests
 ```
 
-### Key Files and Directories
+## API Routes
 
-- **.env**: Environment variables.
-- **.env.example**: Example environment variables file.
-- **.eslintrc.json**: ESLint configuration for code quality.
-- **.gitignore**: Specifies files and directories to be ignored by Git.
-- **.prettierrc**: Prettier configuration for code formatting.
-- **package.json**: Contains project metadata and dependencies.
-- **package-lock.json**: Ensures consistent installation of dependencies.
-- **server.ts**: Entry point for the server.
-- **tsconfig.json**: TypeScript configuration file.
-- **.idea/**: Configuration files for the IDE (IntelliJ IDEA, WebStorm, etc.).
+### Auth & User — `/api/user`
+- `POST /register` — Register (userName, email, password, mobile?, whatsappNumber?)
+- `POST /login` — Login
+- `POST /admin` — Admin login
+- `GET /refresh-token` — Refresh access token
+- `POST /logout` — Logout
+- `PUT /update-user` — Update profile
+- `PUT /update-address` — Update address
+- `PUT /update-password` — Change password
+- `POST /forgot-password-token` — Request reset
+- `PUT /reset-password/:token` — Reset password
+- `POST /send-otp` — Send OTP (SMS/EMAIL)
+- `POST /verify-otp` — Verify OTP
+- `GET /all` — Get all users (admin)
+- Cart: `add-cart`, `remove-cartitem`, `add-cart-quantity-increase`, `add-cart-quantity-decrease`
+- Wishlist: `add-wishlist`, `remove-wishlist`, `get-wishlist`
+- `POST /review` — Add rating/comment
 
-### Services Directory
+### Products — `/api/product`
+- `GET /` — All products
+- `GET /:slug` — By slug
+- `GET /tag/:tag` — By tag
+- `GET /category/:category` — By category
+- `GET /collection/:collectionName` — By collection
+- `POST /createProduct` — Create (admin)
+- `PUT /:id` — Update
+- `PUT /stock-update/:id` — Update stock (admin)
+- `DELETE /:id` — Delete (admin)
 
-- **services/collection/**:
-    - `collectionController.ts`: Handles HTTP requests related to collections.
-    - `collectionModel.ts`: Defines the schema and database operations for collections.
-    - `collectionRouter.ts`: Routes HTTP requests to the appropriate controller methods.
-    - `collectionTypes.ts`: Defines TypeScript types for collections.
+### Orders — `/api/order`
+- `POST /create` — Create order
+- `GET /user-order` — My orders
+- `GET /my-subscriptions` — My subscriptions with credentials
+- `POST /renew` — Request renewal
+- `GET /all-orders` — All orders (admin)
+- `PUT /status-update/:id` — Update status (admin)
+- `PUT /assign-credentials/:id` — Assign credentials (admin)
+- `PUT /mark-active/:id` — Mark active (admin)
+- `PUT /mark-expired/:id` — Mark expired (admin)
 
-- **services/order/**:
-    - `orderController.ts`
-    - `orderModel.ts`
-    - `orderRouter.ts`
-    - `orderTypes.ts`
+### Coupons — `/api/coupon`
+- `POST /validate` — Validate coupon
+- `POST /create` — Create (admin)
+- `GET /all` — All coupons (admin)
+- `PUT /:id` — Update (admin)
+- `DELETE /:id` — Delete (admin)
 
-- **services/product/**:
-    - `productController.ts`
-    - `productModel.ts`
-    - `productRouter.ts`
-    - `productTypes.ts`
+### Tickets — `/api/ticket`
+- `POST /create` — Create ticket
+- `GET /my-tickets` — My tickets
+- `GET /:id` — Ticket detail
+- `POST /:id/reply` — Customer reply
+- `GET /admin/all` — All tickets (admin)
+- `POST /admin/:id/reply` — Admin reply
+- `PUT /admin/:id/status` — Update status (admin)
 
-- **services/user/**:
-    - `userController.ts`
-    - `userModel.ts`
-    - `userRouter.ts`
-    - `userTypes.ts`
+### Refunds — `/api/refund`
+- `POST /request` — Request refund
+- `GET /my-refunds` — My refunds
+- `GET /admin/all` — All refunds (admin)
+- `PUT /admin/:id` — Process refund (admin)
 
-### src Directory
+### Health — `/api/health`
+- `GET /` — Health check (for uptime monitoring)
 
-- **config.ts**: Configuration settings for the application.
-- **dbConnection.ts**: Database connection setup.
-- **middlewares/**:
-    - `authMiddleware.ts`: Handles user authentication.
-    - `globalErrorHandler.ts`: Captures and processes errors globally.
-    - `isAdmin.ts`: Checks if the user has admin privileges.
+## Environment Variables
+See `.env.example` for all required variables.
 
-## Development
-
-### Running the Development Server
-To start the development server with live-reloading:
-```sh
-npm run dev
-```
-
-### Building the Project
-To compile TypeScript files into JavaScript:
-```sh
-npm run build
-```
-
-To format code with Prettier:
-```sh
-npm run format
-```
-
-## API Endpoints
-
-### Authentication
-- **POST /api/v1/auth/login**: User login.
-- **POST /api/v1/auth/register**: User registration.
-
-### Collections
-- **GET /api/v1/collections**: Retrieve all collections.
-- **POST /api/v1/collections**: Create a new collection.
-- **PUT /api/v1/collections/:id**: Update a collection.
-- **DELETE /api/v1/collections/:id**: Delete a collection.
-
-### Orders
-- **GET /api/v1/orders**: Retrieve all orders.
-- **POST /api/v1/orders**: Create a new order.
-- **PUT /api/v1/orders/:id**: Update an order.
-- **DELETE /api/v1/orders/:id**: Delete an order.
-
-### Products
-- **GET /api/v1/products**: Retrieve all products.
-- **POST /api/v1/products**: Create a new product.
-- **PUT /api/v1/products/:id**: Update a product.
-- **DELETE /api/v1/products/:id**: Delete a product.
-
-### Users
-- **GET /api/v1/users**: Retrieve all users.
-- **POST /api/v1/users**: Create a new user.
-- **PUT /api/v1/users/:id**: Update a user.
-- **DELETE /api/v1/users/:id**: Delete a user.
-
-## Testing
-
-### Running Tests
-To run tests:
-```sh
-npm test
-```
-
-## Deployment
-For deployment, ensure that all environment variables are properly set and the project is built. Deploy the compiled files in the `dist` directory to your server.
-
-## Contributing
-To contribute to this project:
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature/your-feature`).
-3. Make your changes and commit them (`git commit -am 'Add new feature'`).
-4. Push to the branch (`git push origin feature/your-feature`).
-5. Create a new Pull Request.
+## Scripts
+- `npm run dev` — Development server with nodemon
+- `npm run build` — Compile TypeScript
+- `npm start` — Start production server
+- `npm run format` — Format code with Prettier
 
 ## License
-This project is licensed under the MIT License.
-
-## Contact
-For any questions or support, please contact:
-- **Project Manager** `and` **System Proponent**: Ukay Khing Marma (ukaykhing25@gmail.com)
+ISC

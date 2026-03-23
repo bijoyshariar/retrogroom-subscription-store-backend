@@ -62,5 +62,9 @@ orderSchema.pre("save", function (next) {
   next();
 });
 
+orderSchema.index({ user: 1, status: 1 });
+orderSchema.index({ status: 1 });
+orderSchema.index({ orderNumber: 1 });
+
 const Order = mongoose.model<OrderDocument>("Order", orderSchema);
 export default Order;

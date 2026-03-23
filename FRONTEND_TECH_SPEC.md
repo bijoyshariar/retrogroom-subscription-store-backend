@@ -233,8 +233,58 @@ PENDING → (user pays) → PAID → (admin assigns credentials) → DELIVERED �
 ---
 
 ## Payment Gateways
-1. **SSLCommerz** — already integrated. Backend returns `{ url }` → redirect user to payment page → callbacks handle success/fail/cancel
-2. **UddoktaPay** — to be integrated (config ready in backend). Similar flow expected.
+
+### 1. SSLCommerz
+- Backend returns `{ url }` → redirect user to gateway page
+- Callbacks: `/api/order/ssl-payment-success/:id`, `/ssl-payment-fail/:id`, `/ssl-payment-cancel/:id`
+
+### 2. UddoktaPay (bKash, Nagad, Rocket, Upay)
+- Backend returns `{ url }` → redirect user to gateway page
+- After payment, user is redirected to `/api/order/uddoktapay-verify?invoice_id=...`
+- Backend verifies and redirects to frontend:
+  - Success: `{FRONTEND_URL}/checkout/success?order={orderNumber}`
+  - Failed: `{FRONTEND_URL}/checkout/failed`
+  - Cancelled: `{FRONTEND_URL}/checkout/cancelled`
+- Frontend needs these 3 pages to handle redirects
+
+### UddoktaPay Routes
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/order/uddoktapay-verify` | Payment verification redirect (handled by backend) |
+| GET | `/api/order/uddoktapay-cancel/:id` | Cancel redirect (handled by backend) |
+| POST | `/api/order/uddoktapay-webhook` | IPN webhook (backend only) |
+
+---
+
+## WhatsApp Credential Delivery (Frontend Only)
+
+This is NOT a backend feature. The admin dashboard handles it entirely on the frontend:
+
+1. Admin goes to order detail page
+2. Admin fills in credentials (email, password, renew date)
+3. Admin clicks "Send via WhatsApp" button
+4. Frontend constructs a `wa.me` URL and opens it in a new tab:
+
+```typescript
+const sendViaWhatsApp = (phone: string, credentials: { email: string; password: string; renewDate: string }) => {
+  const message = encodeURIComponent(
+    `CreativeCache - Your Subscription Credentials\n\n` +
+    `Email: ${credentials.email}\n` +
+    `Password: ${credentials.password}\n` +
+    `Renew Date: ${credentials.renewDate}\n\n` +
+    `Thank you for your purchase!`
+  );
+  // Remove + and spaces, ensure starts with country code
+  const cleanPhone = phone.replace(/[\s+\-]/g, '');
+  window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
+};
+```
+
+5. Admin also calls `PUT /api/order/assign-credentials/:id` with `deliveryMethod: "WHATSAPP"` to save credentials in the system
+
+The user's WhatsApp number is available from the order's populated user data (`user.whatsappNumber`).
+
+---
 
 ## Business Rules
 - No physical shipping — this is a digital subscription store
@@ -243,3 +293,5 @@ PENDING → (user pays) → PAID → (admin assigns credentials) → DELIVERED �
 - Credentials visible on user dashboard after admin assigns them
 - Renewal = new order linked to original via `originalOrder` field
 - Refund only available if order PAID but not delivered after 24 hours
+- Refund processed within 12 hours by admin
+- OTP verification available via SMS (Alpha SMS / sms.net.bd) and Email

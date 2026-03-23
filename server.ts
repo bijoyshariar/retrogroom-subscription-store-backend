@@ -1,3 +1,4 @@
+import "./src/patches/patchBuffer";
 import express from "express";
 import path from "path";
 import {config} from "./src/config";
